@@ -102,53 +102,109 @@ def depthFirstSearch(problem:SearchProblem)->List[Direction]:
     fringe.push(initialState) # The first state is pushed in the fringe. 
                                             
 
-    visitedStates = {initialState: [initialState,None]} # The set of the visited states (graph research) stocked under the form: [previousState, [state, directionTaken]]
+    visitedStates = set() # The set of the visited states (graph research)
+    visitedSuccessors = {initialState: [initialState,None]} # The set of the visited states (graph research) stocked under the form: [previousState, [state, directionTaken]]
     while(not(fringe.isEmpty())):
         state = fringe.pop()
+        visitedStates.add(state)
 
         if (problem.isGoalState(state)): 
             break
 
         for successor,direction,cost in problem.getSuccessors(state):
-            if not(visitedStates.get(successor,False)):
-                print("state: ", state)
-                print("successor: ", successor)
-                print("direction: ", direction)
-                visitedStates[successor] = [state,direction]
+            if not(successor in visitedStates):
+                visitedSuccessors[successor] = [state,direction]
+                
                 fringe.push(successor)
 
-    solution = [direction]
+    solution = []
     while(state != problem.getStartState()):
-        state, direction = visitedStates.get(state)
+        state, direction = visitedSuccessors.get(state)
+        
         solution.append(direction)
 
-    print(solution)
-    return solution.reverse()
-
-
-
-    util.raiseNotDefined()
+    solution.reverse()
+    return solution
 
 
 def breadthFirstSearch(problem:SearchProblem)->List[Direction]:
     """Search the shallowest nodes in the search tree first."""
 
 
-    '''
-        INSÉREZ VOTRE SOLUTION À LA QUESTION 2 ICI
-    '''
+    initialState = problem.getStartState() # Initial State
 
-    util.raiseNotDefined()
+    fringe = util.Queue() # The Fringe
+    fringe.push(initialState) # The first state is pushed in the fringe. 
+                                            
+
+    visitedStates = set() # The set of the visited states (graph research)
+    visitedSuccessors = {initialState: [initialState,None]} # The set of the visited states (graph research) stocked under the form: [previousState, [state, directionTaken]]
+    while(not(fringe.isEmpty())):
+        state = fringe.pop()
+        if state in visitedStates: 
+            continue
+        visitedStates.add(state)
+
+        if (problem.isGoalState(state)): 
+            break
+
+        for successor,direction,cost in problem.getSuccessors(state):
+            if not(successor in visitedStates):
+                visitedSuccessors.setdefault(successor,[state,direction])
+                
+                fringe.push(successor)
+
+    solution = []
+    while(state != problem.getStartState()):
+        state, direction = visitedSuccessors.get(state)
+        
+        solution.append(direction)
+
+    solution.reverse()
+    return solution
 
 def uniformCostSearch(problem:SearchProblem)->List[Direction]:
     """Search the node of least total cost first."""
 
 
-    '''
-        INSÉREZ VOTRE SOLUTION À LA QUESTION 3 ICI
-    '''
+    initialState = problem.getStartState() # Initial State
 
-    util.raiseNotDefined()
+    fringe = util.PriorityQueue() # The Fringe
+    fringe.push(initialState, 0) # The first state is pushed in the fringe. 
+                                            
+
+    visitedStates = set() # The set of the visited states (graph research)
+    visitedSuccessors = {initialState: [initialState,None,0]} # The set of the visited states (graph research) stocked under the form: 
+                                                            # [previousState, [state, directionTaken,costOfPath]]
+    while(not(fringe.isEmpty())):
+        state = fringe.pop()
+        if state in visitedStates: 
+            continue
+        visitedStates.add(state)
+
+        if (problem.isGoalState(state)): 
+            break
+
+        for successor,direction,cost in problem.getSuccessors(state):
+            if not(successor in visitedStates):
+                _,_,costOfPath = visitedSuccessors.get(state)
+                newCostOfPath = cost + costOfPath
+
+                if visitedSuccessors.get(successor) and newCostOfPath < visitedSuccessors.get(successor)[2]:
+                    visitedSuccessors[successor] = [state,direction,newCostOfPath]
+                visitedSuccessors.setdefault(successor,[state,direction,newCostOfPath])
+
+                fringe.push(successor,newCostOfPath)
+
+    solution = []
+    while(state != problem.getStartState()):
+        state, direction,_ = visitedSuccessors.get(state)
+        
+        solution.append(direction)
+
+    solution.reverse()
+    return solution
+
 
 def nullHeuristic(state:GameState, problem:SearchProblem=None)->List[Direction]:
     """
@@ -159,11 +215,45 @@ def nullHeuristic(state:GameState, problem:SearchProblem=None)->List[Direction]:
 
 def aStarSearch(problem:SearchProblem, heuristic=nullHeuristic)->List[Direction]:
     """Search the node that has the lowest combined cost and heuristic first."""
-    '''
-        INSÉREZ VOTRE SOLUTION À LA QUESTION 4 ICI
-    '''
 
-    util.raiseNotDefined()
+    initialState = problem.getStartState() # Initial State
+
+    fringe = util.PriorityQueue() # The Fringe
+    fringe.push(initialState, 0) # The first state is pushed in the fringe. 
+                                            
+
+    visitedStates = set() # The set of the visited states (graph research)
+    visitedSuccessors = {initialState: [initialState,None,0]} # The set of the visited states (graph research) stocked under the form: 
+                                                            # [previousState, [state, directionTaken,costOfPath]]
+    while(not(fringe.isEmpty())):
+        state = fringe.pop()
+        if state in visitedStates: 
+            continue
+        visitedStates.add(state)
+
+        if (problem.isGoalState(state)): 
+            break
+
+        for successor,direction,cost in problem.getSuccessors(state):
+            if not(successor in visitedStates):
+                _,_,costOfPath = visitedSuccessors.get(state)
+                newCostOfPath = cost + costOfPath + heuristic(state,problem)
+
+                if visitedSuccessors.get(successor) and newCostOfPath < visitedSuccessors.get(successor)[2]:
+                    visitedSuccessors[successor] = [state,direction,newCostOfPath]
+                visitedSuccessors.setdefault(successor,[state,direction,newCostOfPath])
+
+                fringe.push(successor,newCostOfPath)
+
+    solution = []
+    while(state != problem.getStartState()):
+        state, direction,_ = visitedSuccessors.get(state)
+        
+        solution.append(direction)
+    solution.reverse()
+
+    print(solution)
+    return solution
 
 
 # Abbreviations
