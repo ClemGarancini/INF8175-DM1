@@ -96,9 +96,36 @@ def depthFirstSearch(problem:SearchProblem)->List[Direction]:
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
 
-    '''
-        INSÉREZ VOTRE SOLUTION À LA QUESTION 1 ICI
-    '''
+    initialState = problem.getStartState() # Initial State
+
+    fringe = util.Stack() # The Fringe
+    fringe.push(initialState) # The first state is pushed in the fringe. 
+                                            
+
+    visitedStates = {initialState: [initialState,None]} # The set of the visited states (graph research) stocked under the form: [previousState, [state, directionTaken]]
+    while(not(fringe.isEmpty())):
+        state = fringe.pop()
+
+        if (problem.isGoalState(state)): 
+            break
+
+        for successor,direction,cost in problem.getSuccessors(state):
+            if not(visitedStates.get(successor,False)):
+                print("state: ", state)
+                print("successor: ", successor)
+                print("direction: ", direction)
+                visitedStates[successor] = [state,direction]
+                fringe.push(successor)
+
+    solution = [direction]
+    while(state != problem.getStartState()):
+        state, direction = visitedStates.get(state)
+        solution.append(direction)
+
+    print(solution)
+    return solution.reverse()
+
+
 
     util.raiseNotDefined()
 
