@@ -219,14 +219,15 @@ def aStarSearch(problem:SearchProblem, heuristic=nullHeuristic)->List[Direction]
     initialState = problem.getStartState() # Initial State
 
     fringe = util.PriorityQueue() # The Fringe
-    fringe.push(initialState, 0) # The first state is pushed in the fringe. 
+    fringe.push([initialState,0], 0) # The first state is pushed in the fringe. 
                                             
 
     visitedStates = set() # The set of the visited states (graph research)
-    visitedSuccessors = {initialState: [initialState,None,0]} # The set of the visited states (graph research) stocked under the form: 
-                                                            # [previousState, [state, directionTaken,costOfPath]]
+    visitedSuccessors = {(initialState,0): [initialState,0,None]} # The set of the visited states (graph research) 
+                                                            # stocked in a dictionnary under the form: 
+                                                            # [[state,g(s)], [previouState,g(previousState), directionTaken]]
     while(not(fringe.isEmpty())):
-        state = fringe.pop()
+        state, costOfPath = fringe.pop()
         if state in visitedStates: 
             continue
         visitedStates.add(state)
@@ -236,23 +237,21 @@ def aStarSearch(problem:SearchProblem, heuristic=nullHeuristic)->List[Direction]
 
         for successor,direction,cost in problem.getSuccessors(state):
             if not(successor in visitedStates):
-                _,_,costOfPath = visitedSuccessors.get(state)
-                newCostOfPath = cost + costOfPath + heuristic(state,problem)
 
-                if visitedSuccessors.get(successor) and newCostOfPath < visitedSuccessors.get(successor)[2]:
-                    visitedSuccessors[successor] = [state,direction,newCostOfPath]
-                visitedSuccessors.setdefault(successor,[state,direction,newCostOfPath])
+                priorityCost = cost + costOfPath + heuristic(successor,problem)
+                newCostOfPath = cost + costOfPath
 
-                fringe.push(successor,newCostOfPath)
+                visitedSuccessors[(successor,newCostOfPath)] = [state,costOfPath,direction]
+
+                fringe.push([successor,newCostOfPath], priorityCost)
 
     solution = []
     while(state != problem.getStartState()):
-        state, direction,_ = visitedSuccessors.get(state)
+        state, costOfPath, direction = visitedSuccessors.get((state,costOfPath))
         
         solution.append(direction)
     solution.reverse()
 
-    print(solution)
     return solution
 
 
