@@ -96,114 +96,102 @@ def depthFirstSearch(problem:SearchProblem)->List[Direction]:
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
 
-    initialState = problem.getStartState() # Initial State
+    start = problem.getStartState() # We get the initial state
 
-    fringe = util.Stack() # The Fringe
-    fringe.push(initialState) # The first state is pushed in the fringe. 
-                                            
+    To_visit = util.Stack()       # Our fringe keeping the state to visit under the form:
+    To_visit.push([start,[]])     # [state, path]
 
-    visitedStates = set() # The set of the visited states (graph research)
-    visitedSuccessors = {initialState: [initialState,None]} # The set of the visited states (graph research) stocked under the form: [previousState, [state, directionTaken]]
-    while(not(fringe.isEmpty())):
-        state = fringe.pop()
-        visitedStates.add(state)
+    Visited = [] # The list of the visited state (graph search)
 
-        if (problem.isGoalState(state)): 
-            break
+    while not To_visit.isEmpty() :
+        position = To_visit.pop()
+        # Even if we check before adding the state to the fringe if it has been visited
+        # We check again whe we take it form it in case it has been visited since
+        while position[0] in Visited:
+            position = To_visit.pop()
 
-        for successor,direction,cost in problem.getSuccessors(state):
-            if not(successor in visitedStates):
-                visitedSuccessors[successor] = [state,direction]
-                
-                fringe.push(successor)
+        if problem.isGoalState(position[0]): # If the state is the solution we return the path
+            return(position[1])
+        else : # In the other case we expand the node and add non visited neighbors to the fringe
+            Successors = problem.getSuccessors(position[0])
+            for neighbor in Successors :
+                if not(neighbor[0] in Visited):
+                    To_visit.push([neighbor[0],position[1] + [neighbor[1]]])
 
-    solution = []
-    while(state != problem.getStartState()):
-        state, direction = visitedSuccessors.get(state)
-        
-        solution.append(direction)
+            Visited.append(position[0]) # We add the expanded state to the list of the visited ones
 
-    solution.reverse()
-    return solution
-
+    # If the search do not find any solution the algorithm return None
+    return None
 
 def breadthFirstSearch(problem:SearchProblem)->List[Direction]:
     """Search the shallowest nodes in the search tree first."""
 
+    ###################################################################################
+    # We use the same code as before but replacing the Stack (LIFO) by a Queue (FIFO) #
+    ###################################################################################
 
-    initialState = problem.getStartState() # Initial State
+    start = problem.getStartState() # We get the initial state
 
-    fringe = util.Queue() # The Fringe
-    fringe.push(initialState) # The first state is pushed in the fringe. 
-                                            
+    To_visit = util.Queue()       # Our fringe keeping the state to visit under the form:
+    To_visit.push([start,[]])     # [state, path]
 
-    visitedStates = set() # The set of the visited states (graph research)
-    visitedSuccessors = {initialState: [initialState,None]} # The set of the visited states (graph research) stocked under the form: [previousState, [state, directionTaken]]
-    while(not(fringe.isEmpty())):
-        state = fringe.pop()
-        if state in visitedStates: 
-            continue
-        visitedStates.add(state)
+    Visited = [] # The list of the visited state (graph search)
 
-        if (problem.isGoalState(state)): 
-            break
+    while not To_visit.isEmpty() :
+        position = To_visit.pop()
+        # Even if we check before adding the state to the fringe if it has been visited
+        # We check again whe we take it form it in case it has been visited since
+        while position[0] in Visited:
+            position = To_visit.pop() 
 
-        for successor,direction,cost in problem.getSuccessors(state):
-            if not(successor in visitedStates):
-                visitedSuccessors.setdefault(successor,[state,direction])
-                
-                fringe.push(successor)
+        if problem.isGoalState(position[0]) : # If the state is the solution we return the path
+            return(position[1])
+        else : # In the other case we expand the node and add non visited neighbors to the fringe
+            Successors = problem.getSuccessors(position[0])
+            for neighbor in Successors :
+                if not(neighbor[0] in Visited):
+                    To_visit.push([neighbor[0],position[1] + [neighbor[1]]])
 
-    solution = []
-    while(state != problem.getStartState()):
-        state, direction = visitedSuccessors.get(state)
-        
-        solution.append(direction)
+            Visited.append(position[0]) # We add the expanded state to the list of the visited ones
 
-    solution.reverse()
-    return solution
+    # If the search do not find any solution the algorithm return None
+    return None
 
 def uniformCostSearch(problem:SearchProblem)->List[Direction]:
     """Search the node of least total cost first."""
 
+    #####################################################################################
+    # We use the same code as before but replacing the Queue (FIFO) by a Priority Queue #
+    #                   By computing the cost of each path                              #
+    #####################################################################################
 
-    initialState = problem.getStartState() # Initial State
+    start = problem.getStartState() # We get the initial state
 
-    fringe = util.PriorityQueue() # The Fringe
-    fringe.push(initialState, 0) # The first state is pushed in the fringe. 
-                                            
+    To_visit = util.PriorityQueue()       # Our fringe keeping the state to visit under the form:
+    To_visit.push([start,[]],0)     # [state, path]
 
-    visitedStates = set() # The set of the visited states (graph research)
-    visitedSuccessors = {initialState: [initialState,None,0]} # The set of the visited states (graph research) stocked under the form: 
-                                                            # [previousState, [state, directionTaken,costOfPath]]
-    while(not(fringe.isEmpty())):
-        state = fringe.pop()
-        if state in visitedStates: 
-            continue
-        visitedStates.add(state)
+    Visited = [] # The list of the visited state (graph search)
 
-        if (problem.isGoalState(state)): 
-            break
+    while not To_visit.isEmpty() :
+        position = To_visit.pop()
+        # Even if we check before adding the state to the fringe if it has been visited
+        # We check again whe we take it form it in case it has been visited since
+        while position[0] in Visited:
+            position = To_visit.pop() 
+        cost = problem.getCostOfActions(position[1])
 
-        for successor,direction,cost in problem.getSuccessors(state):
-            if not(successor in visitedStates):
-                _,_,costOfPath = visitedSuccessors.get(state)
-                newCostOfPath = cost + costOfPath
+        if problem.isGoalState(position[0]) : # If the state is the solution we return the path
+            return(position[1])
+        else : # In the other case we expand the node and add non visited neighbors to the fringe
+            Successors = problem.getSuccessors(position[0])
+            for neighbor in Successors :
+                if not(neighbor[0] in Visited):
+                    To_visit.push([neighbor[0], position[1] + [neighbor[1]]],cost + neighbor[2])
 
-                if visitedSuccessors.get(successor) and newCostOfPath < visitedSuccessors.get(successor)[2]:
-                    visitedSuccessors[successor] = [state,direction,newCostOfPath]
-                visitedSuccessors.setdefault(successor,[state,direction,newCostOfPath])
+            Visited = Visited+[position[0]] # We add the expanded state to the list of the visited ones
 
-                fringe.push(successor,newCostOfPath)
-
-    solution = []
-    while(state != problem.getStartState()):
-        state, direction,_ = visitedSuccessors.get(state)
-        
-        solution.append(direction)
-
-    solution.reverse()
-    return solution
+    # If the search do not find any solution the algorithm return None
+    return None
 
 
 def nullHeuristic(state:GameState, problem:SearchProblem=None)->List[Direction]:
@@ -216,43 +204,39 @@ def nullHeuristic(state:GameState, problem:SearchProblem=None)->List[Direction]:
 def aStarSearch(problem:SearchProblem, heuristic=nullHeuristic)->List[Direction]:
     """Search the node that has the lowest combined cost and heuristic first."""
 
-    initialState = problem.getStartState() # Initial State
+    #####################################################################################
+    # We use the same code as before but replacing adding the heuristic to the priority # 
+    #                                        cost                                       #
+    #####################################################################################
 
-    fringe = util.PriorityQueue() # The Fringe
-    fringe.push([initialState,0], 0) # The first state is pushed in the fringe. 
-                                            
+    start = problem.getStartState() # We get the initial state
 
-    visitedStates = set() # The set of the visited states (graph research)
-    visitedSuccessors = {(initialState,0): [initialState,0,None]} # The set of the visited states (graph research) 
-                                                            # stocked in a dictionnary under the form: 
-                                                            # [[state,g(s)], [previouState,g(previousState), directionTaken]]
-    while(not(fringe.isEmpty())):
-        state, costOfPath = fringe.pop()
-        if state in visitedStates: 
-            continue
-        visitedStates.add(state)
+    To_visit = util.PriorityQueue()       # Our fringe keeping the state to visit under the form:
+    To_visit.push([start,[]],heuristic(start,problem))     # [state, path]
 
-        if (problem.isGoalState(state)): 
-            break
+    Visited = [] # The list of the visited state (graph search)
 
-        for successor,direction,cost in problem.getSuccessors(state):
-            if not(successor in visitedStates):
+    while not To_visit.isEmpty() :
+        position = To_visit.pop()
+        # Even if we check before adding the state to the fringe if it has been visited
+        # We check again whe we take it form it in case it has been visited since
+        while position[0] in Visited:
+            position = To_visit.pop() 
+        cost = problem.getCostOfActions(position[1])
 
-                priorityCost = cost + costOfPath + heuristic(successor,problem)
-                newCostOfPath = cost + costOfPath
+        if problem.isGoalState(position[0]) : # If the state is the solution we return the path
+            return(position[1])
+        else : # In the other case we expand the node and add non visited neighbors to the fringe
+            Successors = problem.getSuccessors(position[0])
+            for neighbor in Successors :
+                if not(neighbor[0] in Visited):
+                    prediction = heuristic(neighbor[0],problem)
+                    To_visit.push([neighbor[0], position[1] + [neighbor[1]]], cost + neighbor[2] + prediction)
 
-                visitedSuccessors[(successor,newCostOfPath)] = [state,costOfPath,direction]
+            Visited = Visited + [position[0]] # We add the expanded state to the list of the visited ones
 
-                fringe.push([successor,newCostOfPath], priorityCost)
-
-    solution = []
-    while(state != problem.getStartState()):
-        state, costOfPath, direction = visitedSuccessors.get((state,costOfPath))
-        
-        solution.append(direction)
-    solution.reverse()
-
-    return solution
+    # If the search do not find any solution the algorithm return None
+    return None
 
 
 # Abbreviations

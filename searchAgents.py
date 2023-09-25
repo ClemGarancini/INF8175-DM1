@@ -26,6 +26,9 @@ description.
 Please only change the parts of the file you are asked to.  Look for the lines
 that say
 
+
+
+
 '''
     INSÉREZ VOTRE SOLUTION À LA QUESTION XX ICI
 '''
@@ -291,9 +294,6 @@ class CornersProblem(search.SearchProblem):
         self._expanded = 0 # DO NOT CHANGE; Number of search nodes expanded
         # Please add any code here which you would like to use
         # in initializing the problem
-  
-        # We add a 4-length boolean array to the state space, representing for each pieces if it has been eaten
-        self.startState = self.startingPosition + (0,0,0,0)
 
 
     def getStartState(self):
@@ -301,13 +301,16 @@ class CornersProblem(search.SearchProblem):
         Returns the start state (in your state space, not the full Pacman state
         space)
         """
-        return self.startState
+        return self.startingPosition
 
     def isGoalState(self, state):
         """
         Returns whether this search state is a goal state of the problem.
         """
-        return state[2:] == (1,1,1,1)
+        ## 
+        _,y = state
+        goal = y//self.walls.height
+        return goal > 10**(len(self.corners))
 
     def getSuccessors(self, state):
         """
@@ -319,26 +322,38 @@ class CornersProblem(search.SearchProblem):
             state, 'action' is the action required to get there, and 'stepCost'
             is the incremental cost of expanding to that successor
         """
-
         successors = []
+        x, y_init = state
+
+        y = y_init%self.walls.height
+
+        niveau = y_init//self.walls.height
+
+        niveau_str = str(niveau)
+        corners_visited = [int(chiffre) for chiffre in niveau_str]
+        corners_visited.pop()
+
+
         for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
-            # Add a successor state to the successor list if the action is legal
-            # Here's a code snippet for figuring out whether a new position hits a wall:
-            x,y = state[0], state[1]
-            dx, dy = Actions.directionToVector(action)
+            dx,dy = Actions.directionToVector(action)
             nextx, nexty = int(x + dx), int(y + dy)
             hitsWall = self.walls[nextx][nexty]
-            if not(hitsWall):
-                try:
-                    cornerIdx = self.corners.index((nextx,nexty))
-                    newCorners = list(state[2:])
-                    newCorners[cornerIdx] = 1
-                    successor = (nextx,nexty) + tuple(newCorners)
-                except ValueError:
-                    successor = (nextx,nexty) + state[2:]
-                successors.append((successor,action,1))
 
-
+            if not hitsWall :
+                if (nextx,nexty) in self.corners :
+                    corner = self.corners.index((nextx,nexty)) + 1
+                    if corner not in corners_visited :
+                        new_corners_visited = [corner] + corners_visited
+                        new_niveau = int(''.join(map(str, new_corners_visited + [0])))
+                        nextposition = (nextx,nexty + new_niveau*self.walls.height)
+                    else :
+                        niveau = int(''.join(map(str, corners_visited + [0])))
+                        nextposition = (nextx,nexty + niveau*self.walls.height)
+                else :
+                    niveau = int(''.join(map(str, corners_visited + [0])))
+                    nextposition = (nextx,nexty + niveau*self.walls.height)
+                stepCost = 1
+                successors.append((nextposition,action,stepCost))
         self._expanded += 1 # DO NOT CHANGE
         return successors
 
@@ -347,12 +362,13 @@ class CornersProblem(search.SearchProblem):
         Returns the cost of a particular sequence of actions.  If those actions
         include an illegal move, return 999999.  This is implemented for you.
         """
-        if actions == None: return 999999
+        if actions == None: 
+            return 999999
         x,y= self.startingPosition
         for action in actions:
             dx, dy = Actions.directionToVector(action)
             x, y = int(x + dx), int(y + dy)
-            if self.walls[x][y]: return 999999
+            if self.walls[x][y%self.walls.height]: return 999999
         return len(actions)
 
 def cornersHeuristic(state, problem):
@@ -368,26 +384,39 @@ def cornersHeuristic(state, problem):
     shortest path from the state to a goal of the problem; i.e.  it should be
     admissible (as well as consistent).
     """
-    corners = problem.corners # These are the corner coordinates
+    if problem.isGoalState(state):
+        return 0
+    
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
+
+    # We store the number of expanded nodes and the starting position
     expanded = problem._expanded
+    pos_init = problem.startingPosition
     
-    # Here we try to suppress the corners in the walls
+    height, width = walls.height, walls.width
+
+    # We will apply UCS to the problem without the horizontal walls
     new_walls = walls.copy()
-    for i in range(1,walls.height - 1):
-        for j in range(1, walls.width - 1):
-            if walls[i][j-1] and walls[i][j]:
-                new_walls[i][j] = False
-    
+    for k in range(1,height-1): 
+        for i in range(1,width-1):
+            if walls[i-1][k] and walls[i][k] :
+                new_walls[i][k] = False # Delete the horizontal walls
+
+    # Change the problem to apply UCS on it
     problem.walls = new_walls
     problem.startingPosition = state
     problem._expanded = 0
-    result = search.uniformCostSearch(problem)
 
+    # Our heuristic is the length of the path found by UCS
+    result = len(search.uniformCostSearch(problem))
+
+    # The problem is set back to its original form
     problem.walls = walls
     problem._expanded = expanded
-    
-    return len(result)
+    problem.startingPosition = pos_init
+
+    return result
+
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -479,12 +508,49 @@ def foodHeuristic(state, problem: FoodSearchProblem):
     Subsequent calls to this heuristic can access
     problem.heuristicInfo['wallCount']
     """
-    position, foodGrid = state
+    #Cette heuristique va donner le nombre optimal de coups en ne prenant en 
+    #compte que les 2 nourritures les plus 
+    #lointaines et la nourriture la plus proche et en utilisant l'algorithme de recherche ucs.
+    #Ainsi, on obtient une assez bonne heuristique puisque pac-man devra passait par tous les points 
+    #dont les plus lointains et aussi les plus proches.
 
-    '''
-        INSÉREZ VOTRE SOLUTION À LA QUESTION 7 ICI
-    '''
+    # On récupère les données du problème
+    position, foodGrid = state # On récupère la position et la grid pour la nourriture
+    expanded = problem._expanded # On récupère le nombre de noeuds parcourus par A* (la variable va comptabiliser ceux parcourus par l'heuristique mais on ne doit pas les compter)
+    pos_init = problem.start # On récupère l'état initial de l'algorithme
+    new_foodGrid = foodGrid.copy() # On copie la grid pour la nourriture
+    position_food_real = foodGrid.asList() # On récupère les positions des nourritures
 
+    # On récupère les distances entre notre position et toutes les nourritures non mangées
+    ecart = [abs(position_food_real[k][0] - position[0]) + abs(position_food_real[k][1] - position[1]) for k in range(len(position_food_real))]
 
-    return 0
+    # On définit le nombre de nourritures à supprimer de nos nourritures à ne pas manger
+    n = len(position_food_real) - 3 # On ne garde que trois nourritures (2 lointaines + 1 proche)
+    position_food_to_delete = [] # On initialise la liste contenant les positions des nourritures à supprimer
+    if position_food_real != []: # S'il y a de la nourriture on effectue les étapes suivantes
+
+        # On conserve la nourriture la plus proche
+        indice_min = ecart.index(min(ecart)) # On récupère la position de la nourriture la plus proche 
+        ecart[indice_min] = max(ecart)+1 # On lui attribue la distance la plus longue possible +1 pour préserver cette nourriture
+
+        # On cherche les nourritures à supprimer
+        for k in range(max(0,n)): # On parcourt pour mettre à l'écart n nourriture (si n est négatif on en met 0 à l'écart)
+            indice_min = ecart.index(min(ecart)) # On récupère la position de la nourriture la plus proche 
+            position_food_to_delete.append(position_food_real[indice_min]) # On ajoute la position de cette nourriture dans la liste des nourritures à supprimer
+            ecart[indice_min] = max(ecart)+1 # On lui attribue la distance la plus longue possible +1 pour ne pas revenir sur la position de cette nourriture
+    
+    # On supprime les nourritures
+    for k in position_food_to_delete : # On parcourt l'ensemble des nourritures à supprimer
+        new_foodGrid[k[0]][k[1]] = False # On supprime la nourriture dans notre nouvelle grid de nourritures
+
+    # On définit notre problème pour ucs    
+    problem.start = (position,new_foodGrid) # On définit le position initiale avec la position à tester et notre nouvelle grid de nourritures
+    result_actions = search.uniformCostSearch(problem) # On résouds le problème avec ucs
+    result = len(result_actions) # On récupère le nombre d'actions trouvés par ucs pour résoudre notre problème
+
+    # On rétablit le paramètres de notre problème
+    problem._expanded = expanded # On rétablit la variable à sa valeur avant l'utilisation d'ucs
+    problem.start = pos_init # On rétablit la nouvelle position initiale
+    return result
+
 
